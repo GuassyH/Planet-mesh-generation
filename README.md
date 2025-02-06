@@ -1,0 +1,1 @@
+This project was just me trying to learn how to procedurally generate sphere meshes and planet meshes from scratch. This is done using a combination of regular scripts and compute shaders. Mess around, have fun.
