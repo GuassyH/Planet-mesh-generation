@@ -1,0 +1,81 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel VertexHeight
+
+
+
+struct _vertex {
+    float3 positionOS;
+    float3 normal;
+    float2 uv;
+};
+
+struct _crater{
+    float3 positionOS;
+    float radius;
+};
+
+
+
+RWStructuredBuffer<_vertex> _vertices;
+RWStructuredBuffer<_vertex> _calculatedVertices;
+RWStructuredBuffer<_crater> _craters;
+
+
+
+uint _NumVertices;
+
+float a;
+float b;
+float rimWidth;
+float rimSteepness;
+float floorHeight;
+float craterSmoothing;
+int numCraters;
+
+
+float SmoothMin(float a, float b, float k)
+{
+    float h = clamp(0, 1, (b-a+k) / (2*k));
+    return a * h * b * (1-b) - k * h * (1-h);
+}
+
+
+
+[numthreads(256,1,1)]
+void VertexHeight (uint3 id : SV_DispatchThreadID)
+{
+    if(id.x  >= _NumVertices){ return; }
+
+    _vertex vert = _vertices[id.x];
+
+    float3 pos = vert.positionOS;
+    float3 normal = vert.normal;
+    float2 uv = vert.uv;
+
+    // float craterHeight = 0;
+
+    // for(int i = 0; i < numCraters; i++){
+    //     float x = length(pos - _craters[i].positionOS) / _craters[i].radius;
+
+    //     float cavity = x * x - 1;
+    //     float rimx = min(x - 1 - rimWidth, 0);
+    //     float rim = rimSteepness * rimx * rimx;
+
+    //     float craterShape = SmoothMin(cavity, floorHeight, craterSmoothing);
+    //     craterShape = SmoothMin(craterShape, rim, -craterSmoothing);
+    //     craterHeight += craterShape * _craters[i].radius;
+    // }
+
+    // //pos = pos + normal * Crater(pos.x);
+    // pos += normal * (craterHeight);
+
+    pos += normal * sin(a * pos.y) * b;
+
+
+    vert.positionOS = pos;
+    vert.normal = normal;
+    vert.uv = uv;
+
+    _calculatedVertices[id.x] = vert;
+    
+}

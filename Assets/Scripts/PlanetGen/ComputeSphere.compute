@@ -1,0 +1,80 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel VertexCalculation
+
+
+
+// vertex struct
+struct _vertex {
+    float3 positionOS;
+    float3 normal;
+    float2 uv;
+};
+
+
+RWStructuredBuffer<_vertex> _vertices;
+
+
+uint _NumVertices;
+
+float4 rotation;
+int resolution;
+float size;
+bool tileUV;
+
+
+
+
+float4 qmul(float4 q1, float4 q2){
+    return float4(
+        q2.xyz * q1.w + q1.xyz * q2.w + cross(q1.xyz, q2.xyz),
+        q1.w * q2.w - dot(q1.xyz, q2.xyz)
+    );
+}
+float3 rotate_vector(float3 v, float4 r){
+    float4 r_c = r * float4(-1, -1, -1, 1);
+    return qmul(r, qmul(float4(v, 0), r_c)).xyz;
+}
+
+
+
+
+[numthreads(256,1,1)]
+void VertexCalculation (uint3 id : SV_DispatchThreadID)
+{
+    
+    // if the id is over the number of vertices stop
+    if(id.x  >= _NumVertices){ return; }
+
+
+    // vertex = the vertex in the position in the Array 
+    _vertex vert = _vertices[id.x];
+
+    // Calculate everything
+    float3 centreOffset = float3(-size/2, -size/2, size/2);
+    float3 pos = float3(vert.positionOS.x * size, vert.positionOS.y * size, 0) / resolution + centreOffset;
+    float2 uv;
+
+    // if tile UV just reverse UV x pos else make is stretch
+    if(tileUV)  {   uv = float2(-pos.x, pos.y);  }
+    else        {   uv = float2(-pos.x + 0.5 * size, pos.y + 0.5 * size) / size;   }
+
+
+    // Rotate the vertex and the normalize position
+    pos = rotate_vector(pos, rotation);
+    pos = normalize(pos);
+    
+    // vertexNormal = pos (pos is a vector from the centre to the position)
+    float3 posNormal = pos;
+    pos = pos * size;
+
+
+    // Assign vert values to created values
+    vert.positionOS = pos;
+    vert.normal = posNormal;
+    vert.uv = uv;
+
+    // make List vertex we took from = vert
+    _vertices[id.x] = vert;
+}
+
+
